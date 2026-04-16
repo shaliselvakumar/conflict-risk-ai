@@ -1,8 +1,8 @@
+streamlit
 pandas
 numpy
-tensorflow-cpu
-streamlit
+matplotlib
 folium
 textblob
-matplotlib
 requests
+tensorflow-cpu==2.15.0
