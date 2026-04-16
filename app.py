@@ -108,8 +108,7 @@ if st.button("Predict"):
 
     sent_imp = -sent * 10
 
-    pred = model.predict(np.array([[event, sent_imp]]))[0][0]
-
+    pred = model.predict(np.array([[event, sent_imp]]))[0]
     st.subheader(get_label(pred))
     st.write(f"Risk Score: {round(pred,2)}")
 
