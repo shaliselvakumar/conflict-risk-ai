@@ -1,0 +1,8 @@
+pandas
+numpy
+tensorflow-cpu
+streamlit
+folium
+textblob
+matplotlib
+requests
