@@ -5,4 +5,4 @@ matplotlib
 folium
 textblob
 requests
-tensorflow-cpu==2.15.0
+scikit-learn
