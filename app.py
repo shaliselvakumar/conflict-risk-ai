@@ -1,180 +1,149 @@
 import streamlit as st
 import numpy as np
+import plotly.express as px
 import folium
-import matplotlib.pyplot as plt
 from streamlit.components.v1 import html
+from streamlit_option_menu import option_menu
 
 from data import load_data
 from preprocess import preprocess
 from train import train_model
-from utils import get_label
 from news_api import fetch_news
 
-# ---------------- UI CONFIG ----------------
-st.set_page_config(
-    page_title="Humanitarian AI",
-    page_icon="🌍",
-    layout="wide"
-)
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(page_title="Humanitarian AI", layout="wide")
 
-# ---------------- CLEAN WHITE CSS ----------------
-st.markdown("""
-<style>
-.stApp {
-    background-color: #ffffff;
-    color: #1f2937;
-}
-
-/* Headings */
-h1 {
-    color: #0f172a;
-}
-h2, h3 {
-    color: #2563eb;
-}
-
-/* Buttons */
-.stButton>button {
-    background-color: #2563eb;
-    color: white;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-/* Dataframe */
-[data-testid="stDataFrame"] {
-    background-color: #f9fafb;
-    border-radius: 10px;
-}
-
-/* Sidebar */
-section[data-testid="stSidebar"] {
-    background-color: #f1f5f9;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ---------------- HEADER ----------------
-st.markdown("""
-# 🌍 Humanitarian Risk Intelligence System  
-### AI-powered platform for proactive conflict monitoring & decision support
-""")
-
-st.markdown("---")
+# ---------------- SIDEBAR NAV ----------------
+with st.sidebar:
+    selected = option_menu(
+        "🌍 Humanitarian AI",
+        ["Home", "Dashboard", "Prediction", "Data"],
+        icons=["house", "bar-chart", "cpu", "table"],
+        default_index=0
+    )
 
 # ---------------- LOAD DATA ----------------
 news = fetch_news()
 df = load_data()
 df = preprocess(df, news)
 
-# ---------------- MODEL ----------------
 X = df[["event_intensity","sentiment_impact"]].values
 y = df["risk_score"].values
-
 model = train_model(X, y)
 
-# ---------------- METRICS ----------------
-col1, col2, col3 = st.columns(3)
+# ---------------- MAP SETUP ----------------
+coords = {
+    "Ukraine":[48,31],"Gaza":[31.5,34.4],"Sudan":[15,30],
+    "Syria":[35,38],"Yemen":[15,48],"Afghanistan":[33,65],
+    "Iran":[32,53],"Israel":[31,35],"Pakistan":[30,70],
+    "Ethiopia":[9,40],"Myanmar":[21,96],"Nigeria":[9,8],
+    "Mali":[17,-4],"Somalia":[5,46],"DR Congo":[-2,23],
+    "India":[20,78],"China":[35,103],"Russia":[60,100],
+    "USA":[37,-95],"UK":[55,-3],"France":[46,2],
+    "Germany":[51,10],"UAE":[24,54],
+    "Saudi Arabia":[24,45],"Turkey":[39,35]
+}
 
-col1.metric("🌍 Countries", len(df))
-col2.metric("🔴 High Risk Zones", int((df["risk"] == 2).sum()))
-col3.metric("📊 Avg Risk", round(df["risk_score"].mean(), 2))
+m = folium.Map(location=[20,0], zoom_start=2)
 
-st.markdown("---")
+for _, row in df.iterrows():
+    if row["location"] in coords:
+        color = ["green","orange","red"][row["risk"]]
+        folium.Circle(
+            location=coords[row["location"]],
+            radius=200000,
+            color=color,
+            fill=True,
+            fill_opacity=0.6
+        ).add_to(m)
 
-# ---------------- INFO ----------------
-st.markdown("""
-### ⚙️ System Overview
-This AI system analyzes conflict intensity and real-time sentiment signals to generate dynamic humanitarian risk scores across regions.
-""")
+# ---------------- HOME PAGE ----------------
+if selected == "Home":
 
-st.markdown("---")
+    st.title("🌍 Humanitarian Risk Intelligence System")
 
-# ---------------- NEWS ----------------
-st.subheader("📰 Live Conflict Signals")
+    st.markdown("""
+    ### AI-powered platform for proactive crisis detection
+    
+    This system predicts humanitarian risks using AI by combining:
+    - Conflict event data
+    - News sentiment analysis
+    - Geospatial visualization
+    """)
 
-if news:
-    for n in news[:5]:
-        st.write("•", n)
-else:
-    st.write("No live news available")
+    st.markdown("---")
+
+    st.subheader("🚨 Why This Matters")
+    st.write("Helps identify high-risk regions early and supports faster decision-making.")
+
+    st.subheader("⚙️ How It Works")
+    st.write("""
+    1. Collects global conflict data  
+    2. Analyzes sentiment signals  
+    3. Generates AI-based risk scores  
+    4. Visualizes risks on global map  
+    """)
+
+    st.success("System Status: ✅ Active")
 
 # ---------------- DASHBOARD ----------------
-col1, col2 = st.columns(2)
+elif selected == "Dashboard":
 
-# 📊 CHART
-with col1:
+    st.title("📊 Global Risk Dashboard")
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Countries", len(df))
+    col2.metric("High Risk", int((df["risk"] == 2).sum()))
+    col3.metric("Avg Risk", round(df["risk_score"].mean(), 2))
+
+    st.markdown("---")
+
+    st.subheader("📰 Live Conflict Signals")
+    if news:
+        for n in news[:5]:
+            st.write("•", n)
+
+    st.markdown("---")
+
     st.subheader("📊 Risk Distribution")
-
     counts = df["risk"].value_counts().reindex([0,1,2], fill_value=0)
 
-    plt.figure()
-    plt.bar(["Low","Medium","High"], counts.values)
-    st.pyplot(plt)
+    fig = px.bar(
+        x=["Low","Medium","High"],
+        y=counts.values,
+        color=["Low","Medium","High"]
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-# 🗺️ MAP
-with col2:
+    st.markdown("---")
+
     st.subheader("🗺️ Global Risk Map")
-
-    coords = {
-        "Ukraine":[48,31],"Gaza":[31.5,34.4],"Sudan":[15,30],
-        "Syria":[35,38],"Yemen":[15,48],"Afghanistan":[33,65],
-        "Iran":[32,53],"Israel":[31,35],"Pakistan":[30,70],
-        "Ethiopia":[9,40],"Myanmar":[21,96],"Nigeria":[9,8],
-        "Mali":[17,-4],"Somalia":[5,46],"DR Congo":[-2,23],
-        "India":[20,78],"China":[35,103],"Russia":[60,100],
-        "USA":[37,-95],"UK":[55,-3],"France":[46,2],
-        "Germany":[51,10],"UAE":[24,54],
-        "Saudi Arabia":[24,45],"Turkey":[39,35]
-    }
-
-    m = folium.Map(location=[20,0], zoom_start=2)
-
-    for _, row in df.iterrows():
-        if row["location"] in coords:
-            color = ["green","orange","red"][row["risk"]]
-
-            folium.Circle(
-                location=coords[row["location"]],
-                radius=200000,
-                color=color,
-                fill=True,
-                fill_opacity=0.6
-            ).add_to(m)
-
-    html(m._repr_html_(), height=450)
-
-st.markdown("---")
-
-# ---------------- DATA ----------------
-st.subheader("📋 Processed Data")
-st.dataframe(df)
-
-st.markdown("---")
+    html(m._repr_html_(), height=500)
 
 # ---------------- PREDICTION ----------------
-st.subheader("🔮 Predict Risk")
+elif selected == "Prediction":
 
-event = st.slider("Event Intensity", 0, 50, 10)
-sent = st.slider("Sentiment", -1.0, 1.0, 0.0)
+    st.title("🔮 Risk Prediction Engine")
 
-if st.button("Predict"):
+    event = st.slider("Event Intensity", 0, 50, 10)
+    sent = st.slider("Sentiment", -1.0, 1.0, 0.0)
 
-    sent_imp = -sent * 10
+    if st.button("Run AI Prediction"):
 
-    pred = model.predict(np.array([[event, sent_imp]]))[0]
+        sent_imp = -sent * 10
+        pred = model.predict(np.array([[event, sent_imp]]))[0]
 
-    st.markdown("### AI Prediction Result")
-    st.success(f"Risk Score: {round(pred,2)}")
+        st.subheader(f"Risk Score: {round(pred,2)}")
 
-    if pred > 25:
-        st.error("🔴 HIGH RISK → Immediate action required")
-    elif pred > 12:
-        st.warning("🟡 MEDIUM RISK → Monitor closely")
-    else:
-        st.info("🟢 LOW RISK → Stable")
+        if pred > 25:
+            st.error("🔴 HIGH RISK → Immediate action required")
+        elif pred > 12:
+            st.warning("🟡 MEDIUM RISK → Monitor closely")
+        else:
+            st.success("🟢 LOW RISK → Stable")
 
-st.markdown("---")
+# ---------------- DATA ----------------
+elif selected == "Data":
 
-# ---------------- FOOTER ----------------
-st.markdown("Built with AI for humanitarian impact 🌍")
+    st.title("📋 Data Explorer")
+    st.dataframe(df)
