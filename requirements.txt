@@ -1,11 +1,8 @@
 streamlit
 pandas
 numpy
-matplotlib
-folium
-textblob
-requests
 plotly
-streamlit-option-menu
-streamlit-lottie
+folium
 scikit-learn
+requests
+textblob
