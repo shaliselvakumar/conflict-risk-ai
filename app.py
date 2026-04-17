@@ -10,47 +10,102 @@ from train import train_model
 from utils import get_label
 from news_api import fetch_news
 
-st.set_page_config(page_title="Humanitarian AI", layout="wide")
+# ---------------- UI CONFIG ----------------
+st.set_page_config(
+    page_title="Humanitarian AI",
+    page_icon="🌍",
+    layout="wide"
+)
 
-st.title("🌍 Proactive Humanitarian Risk Intelligence System")
-st.markdown("AI system integrating conflict data, news signals, and geospatial intelligence.")
+# ---------------- CLEAN WHITE CSS ----------------
+st.markdown("""
+<style>
+.stApp {
+    background-color: #ffffff;
+    color: #1f2937;
+}
 
-# ---------------------------
-# LOAD DATA
-# ---------------------------
+/* Headings */
+h1 {
+    color: #0f172a;
+}
+h2, h3 {
+    color: #2563eb;
+}
+
+/* Buttons */
+.stButton>button {
+    background-color: #2563eb;
+    color: white;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* Dataframe */
+[data-testid="stDataFrame"] {
+    background-color: #f9fafb;
+    border-radius: 10px;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #f1f5f9;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ---------------- HEADER ----------------
+st.markdown("""
+# 🌍 Humanitarian Risk Intelligence System  
+### AI-powered platform for proactive conflict monitoring & decision support
+""")
+
+st.markdown("---")
+
+# ---------------- LOAD DATA ----------------
 news = fetch_news()
 df = load_data()
 df = preprocess(df, news)
 
-# ---------------------------
-# TRAIN MODEL
-# ---------------------------
+# ---------------- MODEL ----------------
 X = df[["event_intensity","sentiment_impact"]].values
 y = df["risk_score"].values
 
 model = train_model(X, y)
 
-# ---------------------------
-# NEWS PANEL
-# ---------------------------
+# ---------------- METRICS ----------------
+col1, col2, col3 = st.columns(3)
+
+col1.metric("🌍 Countries", len(df))
+col2.metric("🔴 High Risk Zones", int((df["risk"] == 2).sum()))
+col3.metric("📊 Avg Risk", round(df["risk_score"].mean(), 2))
+
+st.markdown("---")
+
+# ---------------- INFO ----------------
+st.markdown("""
+### ⚙️ System Overview
+This AI system analyzes conflict intensity and real-time sentiment signals to generate dynamic humanitarian risk scores across regions.
+""")
+
+st.markdown("---")
+
+# ---------------- NEWS ----------------
 st.subheader("📰 Live Conflict Signals")
 
 if news:
     for n in news[:5]:
         st.write("•", n)
 else:
-    st.write("No live news available (using fallback data)")
+    st.write("No live news available")
 
-# ---------------------------
-# DASHBOARD
-# ---------------------------
+# ---------------- DASHBOARD ----------------
 col1, col2 = st.columns(2)
 
-# 📊 CHART (FIXED)
+# 📊 CHART
 with col1:
     st.subheader("📊 Risk Distribution")
 
-    # FIX: ensure all 3 categories exist
     counts = df["risk"].value_counts().reindex([0,1,2], fill_value=0)
 
     plt.figure()
@@ -77,7 +132,6 @@ with col2:
 
     for _, row in df.iterrows():
         if row["location"] in coords:
-
             color = ["green","orange","red"][row["risk"]]
 
             folium.Circle(
@@ -90,15 +144,15 @@ with col2:
 
     html(m._repr_html_(), height=450)
 
-# ---------------------------
-# DATA TABLE
-# ---------------------------
+st.markdown("---")
+
+# ---------------- DATA ----------------
 st.subheader("📋 Processed Data")
 st.dataframe(df)
 
-# ---------------------------
-# PREDICTION
-# ---------------------------
+st.markdown("---")
+
+# ---------------- PREDICTION ----------------
 st.subheader("🔮 Predict Risk")
 
 event = st.slider("Event Intensity", 0, 50, 10)
@@ -109,12 +163,18 @@ if st.button("Predict"):
     sent_imp = -sent * 10
 
     pred = model.predict(np.array([[event, sent_imp]]))[0]
-    st.subheader(get_label(pred))
-    st.write(f"Risk Score: {round(pred,2)}")
+
+    st.markdown("### AI Prediction Result")
+    st.success(f"Risk Score: {round(pred,2)}")
 
     if pred > 25:
-        st.error("⚠️ High Risk → Immediate humanitarian response needed")
+        st.error("🔴 HIGH RISK → Immediate action required")
     elif pred > 12:
-        st.warning("⚠️ Medium Risk → Monitor closely")
+        st.warning("🟡 MEDIUM RISK → Monitor closely")
     else:
-        st.success("✅ Low Risk → Stable")
+        st.info("🟢 LOW RISK → Stable")
+
+st.markdown("---")
+
+# ---------------- FOOTER ----------------
+st.markdown("Built with AI for humanitarian impact 🌍")
