@@ -5,6 +5,6 @@ matplotlib
 folium
 textblob
 requests
-scikit-learnS
 plotly
 streamlit-option-menu
+streamlit-lottie

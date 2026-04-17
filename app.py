@@ -2,8 +2,10 @@ import streamlit as st
 import numpy as np
 import plotly.express as px
 import folium
+import requests
 from streamlit.components.v1 import html
 from streamlit_option_menu import option_menu
+from streamlit_lottie import st_lottie
 
 from data import load_data
 from preprocess import preprocess
@@ -13,7 +15,13 @@ from news_api import fetch_news
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="Humanitarian AI", layout="wide")
 
-# ---------------- SIDEBAR NAV ----------------
+# ---------------- LOAD ANIMATION ----------------
+def load_lottie(url):
+    return requests.get(url).json()
+
+lottie_ai = load_lottie("https://assets2.lottiefiles.com/packages/lf20_jcikwtux.json")
+
+# ---------------- SIDEBAR ----------------
 with st.sidebar:
     selected = option_menu(
         "🌍 Humanitarian AI",
@@ -31,7 +39,7 @@ X = df[["event_intensity","sentiment_impact"]].values
 y = df["risk_score"].values
 model = train_model(X, y)
 
-# ---------------- MAP SETUP ----------------
+# ---------------- MAP ----------------
 coords = {
     "Ukraine":[48,31],"Gaza":[31.5,34.4],"Sudan":[15,30],
     "Syria":[35,38],"Yemen":[15,48],"Afghanistan":[33,65],
@@ -57,32 +65,35 @@ for _, row in df.iterrows():
             fill_opacity=0.6
         ).add_to(m)
 
-# ---------------- HOME PAGE ----------------
+# ---------------- HOME ----------------
 if selected == "Home":
 
-    st.title("🌍 Humanitarian Risk Intelligence System")
+    col1, col2 = st.columns([2,1])
 
-    st.markdown("""
-    ### AI-powered platform for proactive crisis detection
-    
-    This system predicts humanitarian risks using AI by combining:
-    - Conflict event data
-    - News sentiment analysis
-    - Geospatial visualization
-    """)
+    with col1:
+        st.title("🌍 Humanitarian Risk Intelligence System")
 
-    st.markdown("---")
+        st.markdown("""
+        ### AI-powered platform for proactive crisis detection
+        
+        Predict risks before they escalate using AI-driven insights.
+        """)
 
-    st.subheader("🚨 Why This Matters")
-    st.write("Helps identify high-risk regions early and supports faster decision-making.")
+        st.markdown("---")
 
-    st.subheader("⚙️ How It Works")
-    st.write("""
-    1. Collects global conflict data  
-    2. Analyzes sentiment signals  
-    3. Generates AI-based risk scores  
-    4. Visualizes risks on global map  
-    """)
+        st.markdown("""
+        ### 🚨 Why This Matters
+        Early prediction saves lives by enabling faster response.
+        
+        ### ⚙️ How It Works
+        - Collects global conflict data  
+        - Analyzes sentiment signals  
+        - Generates AI risk scores  
+        - Visualizes global threats  
+        """)
+
+    with col2:
+        st_lottie(lottie_ai, height=250)
 
     st.success("System Status: ✅ Active")
 
@@ -106,6 +117,7 @@ elif selected == "Dashboard":
     st.markdown("---")
 
     st.subheader("📊 Risk Distribution")
+
     counts = df["risk"].value_counts().reindex([0,1,2], fill_value=0)
 
     fig = px.bar(
